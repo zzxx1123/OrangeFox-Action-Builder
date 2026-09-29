@@ -19,6 +19,18 @@ on:
         description: '设备树仓库的分支'
         required: true
         default: 'android-12.1'
+      COMMON_TREE:
+        description: '通用设备树 GitHub 链接 (sm8550-common)'
+        required: true
+        default: 'https://github.com/sony-sm8550-TWRP/device_sony_sm8550-common-TWRP'
+      COMMON_TREE_BRANCH:
+        description: '通用设备树仓库的分支'
+        required: true
+        default: 'android-12.1'
+      COMMON_PATH:
+        description: '通用设备树在源码中的存放路径'
+        required: true
+        default: 'device/sony/sm8550-common'
       DEVICE_PATH:
         description: '设备树在源码中的存放路径'
         required: true
@@ -114,6 +126,11 @@ jobs:
         git am bionic.patch
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/external/libmicrohttpd
         sed -i 's/^static enum MHD_Result send_response/static enum MHD_Result __attribute__((unused)) send_response/' server.c
+
+    - name: Clone Common Device Tree
+      run: |
+        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
+        git clone ${{ inputs.COMMON_TREE }} -b ${{ inputs.COMMON_TREE_BRANCH }} ./${{ inputs.COMMON_PATH }}
 
     - name: Clone Device Tree
       run: |
