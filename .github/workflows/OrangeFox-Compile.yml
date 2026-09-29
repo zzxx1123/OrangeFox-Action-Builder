@@ -145,7 +145,7 @@ jobs:
         echo "" >> $CONF
         echo "# ==========================================" >> $CONF
         echo "# OrangeFox Specs Injected Auto" >> $CONF
-        echo "FOX_VERSION := \"R12.1_Xperia1V\"" >> $CONF
+        echo "FOX_MAINTAINER_PATCH_VERSION := 1" >> $CONF
         echo "OF_MAINTAINER := \"SelfBuilt\"" >> $CONF
         echo "FOX_AB_DEVICE := 1" >> $CONF
         echo "TARGET_NO_RECOVERY := true" >> $CONF
