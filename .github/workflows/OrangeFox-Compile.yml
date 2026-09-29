@@ -1,16 +1,10 @@
-name: OrangeFox - Build
-
-# Credits to:
-# https://github.com/TeamWin
-# https://gitlab.com/OrangeFox
-# https://github.com/azwhikaru for Recovery Builder Template
-# And all Contributors in every repositories I used
+name: OrangeFox - Build (Pure Xperia 1V Edition)
 
 on:
   workflow_dispatch:
     inputs:
       MANIFEST_BRANCH:
-        description: 'OrangeFox Manifest Branch'
+        description: 'OrangeFox 源码清单分支'
         required: true
         default: '12.1'
         type: choice
@@ -18,46 +12,32 @@ on:
         - 12.1
         - 14.1
       DEVICE_TREE:
-        description: 'OrangeFox Device Tree'
+        description: 'Xperia 1 V 设备树 GitHub 链接'
         required: true
-        default: 'https://github.com/ymdzq/OFRP-device_xiaomi_mondrian'
+        default: 'https://github.com/sony-sm8550-TWRP/device_sony_pdx234-TWRP'
       DEVICE_TREE_BRANCH:
-        description: 'OrangeFox Device Tree Branch'
+        description: '设备树仓库的分支'
         required: true
-        default: 'fox_12.1-a16'
+        default: 'android-12.1'
       DEVICE_PATH:
-        description: 'Specify your Device Path'
+        description: '设备树在源码中的存放路径'
         required: true
-        default: 'device/xiaomi/mondrian'
+        default: 'device/sony/pdx234'
       DEVICE_NAME:
-        description: 'Specify your Device Codename'
+        description: '设备代号'
         required: true
-        default: 'mondrian'
+        default: 'pdx234'
       BUILD_TARGET:
-        description: 'Specify your Build Target'
+        description: '构建目标 (索尼1V必须选择 vendorboot)'
         required: true
-        default: 'recovery'
+        default: 'vendorboot'
         type: choice
         options:
         - boot
         - recovery
         - vendorboot
-      MAGISK_VERSION:
-        description: 'Specify your Magisk Version'
-        required: true
-        default: 'Magisk'
-        type: choice
-        options:
-        - Magisk
-        - MagiskAlpha
-        - MagiskDelta
-      ADD_WLAN_SUPPORT:
-        description: 'Add WLAN support (EXPERIMENTAL!!)'
-        type: boolean
-        required: true
-        default: false
       USE_CCACHE:
-        description: Use ccache for compilation
+        description: 使用 ccache 进行加速编译
         type: boolean
         required: true
         default: true
@@ -81,7 +61,6 @@ jobs:
         cd scripts
         sudo bash setup/android_build_env.sh
         cd .. && rm -rf scripts
-        # Redendent apt cleanup
         sudo apt autoclean >/dev/null || true
         sudo apt autoremove -qy 2>/dev/null || true
         sudo rm -rf /var/cache/apt/archives/ 2>/dev/null || true
@@ -125,7 +104,7 @@ jobs:
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
         sed -i 's/<project name="android_hardware_qcom_bootctrl" path="hardware\/qcom-caf\/bootctrl" remote="LineageOS" revision="lineage-19.1-caf" \/>/<project name="android_hardware_qcom_bootctrl" path="hardware\/qcom-caf\/bootctrl" remote="LineageOS" revision="lineage-21.0-caf" \/>/g' ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/.repo/manifests/twrp-default.xml
-        sed -i '/<!-- Include phh'\''s treble repo for lptools support -->/i \    <!-- Include libmicrohttpd for TWRP -->\n    <project name="adontoo/android_external_libmicrohttpd" path="external/libmicrohttpd" remote="github" revision="ofox-14.1" />\n' ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/.repo/manifests/twrp-default.xml
+        sed -i '/<!-- Include phh'''s treble repo for lptools support -->/i \\    <!-- Include libmicrohttpd for TWRP -->\n    <project name="adontoo/android_external_libmicrohttpd" path="external/libmicrohttpd" remote="github" revision="ofox-14.1" />\n' ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/.repo/manifests/twrp-default.xml
         sed -i '/<project path="bootable\/recovery" name="android_bootable_recovery" remote="TeamWin" revision="android-12.1"\/>/d' ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/.repo/manifests/twrp-default.xml
         mv ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/bootable/recovery ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/bootable/recovery-ofrp
         repo sync
@@ -136,31 +115,6 @@ jobs:
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/external/libmicrohttpd
         sed -i 's/^static enum MHD_Result send_response/static enum MHD_Result __attribute__((unused)) send_response/' server.c
 
-    - name: Patching the Source Code For 12.1 Branch
-      if: inputs.MANIFEST_BRANCH == '12.1'
-      run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/bootable/recovery
-        git remote add ymdzq https://github.com/ymdzq/OrangeFox_Recovery && git fetch ymdzq fox_12.1 && git merge --no-ff ymdzq/fox_12.1 -m "Apply custom patches"
-        if [ "${{ inputs.ADD_WLAN_SUPPORT }}" = "true" ]; then
-        wget "https://github.com/ymdzq/OrangeFox_Recovery/commit/f8712872b9ec663b658a1e8eba4840877fe45ea6.patch" -O wlan.patch
-        git am wlan.patch
-        wget "https://github.com/ymdzq/OrangeFox_Recovery/commit/55743730c43681a777c4eacddd9d64a84dce3a54.patch" -O wlan2.patch
-        git am wlan2.patch
-        fi
-
-    - name: Add WLAN support For 14.1 Branch
-      if: inputs.MANIFEST_BRANCH == '14.1' && inputs.ADD_WLAN_SUPPORT
-      run: |
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-        git clone https://github.com/adontoo/android_external_libmicrohttpd -b ofox-14.1 external/libmicrohttpd
-        rm -rf bionic
-        git clone https://github.com/adontoo/OrangeFox-android_platform_bionic bionic
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/bootable/recovery
-        wget "https://github.com/adontoo/device_xiaomi_sm8750_OFRP/raw/refs/heads/fox_14.1/patches/ofox_bootable_recovery.patch" -O wlan.patch
-        git apply wlan.patch
-        wget "https://github.com/ymdzq/OrangeFox_Recovery/commit/55743730c43681a777c4eacddd9d64a84dce3a54.patch" -O wlan2.patch
-        git apply wlan2.patch
-
     - name: Clone Device Tree
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
@@ -168,25 +122,18 @@ jobs:
         cd ${{ inputs.DEVICE_PATH }}
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
-    - name: Update OrangeFox Built-in Magisk
+    - name: Inject OrangeFox Mandatory Macros
       run: |
-        git clone https://github.com/ymdzq/twrp_prebuilt ~/twrp_prebuilt
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/${{ inputs.DEVICE_PATH }}
-        if ! grep -q 'FOX_USE_SPECIFIC_MAGISK_ZIP' vendorsetup.sh; then (echo 'export FOX_USE_SPECIFIC_MAGISK_ZIP=~/twrp_prebuilt/Magisk/${{ inputs.MAGISK_VERSION }}.apk'>>vendorsetup.sh && echo "Added FOX_USE_SPECIFIC_MAGISK_ZIP in vendorsetup.sh"); else sed -i 's/.*export FOX_USE_SPECIFIC_MAGISK_ZIP.*/export FOX_USE_SPECIFIC_MAGISK_ZIP=\~\/twrp_prebuilt\/Magisk\/${{ inputs.MAGISK_VERSION }}.apk/' vendorsetup.sh; fi
-        cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/vendor/recovery
-        curl -L --retry 3 "https://github.com/ymdzq/scripts/blob/main/Magisk_ver.patch?raw=true" -o Magisk_ver.patch
-        if [ "${{ inputs.MANIFEST_BRANCH }}" = "14.1" ]; then
-          sed -i 's/OrangeFox_A12.sh/OrangeFox_A14.sh/g' Magisk_ver.patch
-        fi
-        git am Magisk_ver.patch
-
-    - name: Update OrangeFox Built-in magiskboot
-      run: |
-        curl -L --retry 3 $(echo $(curl -s "https://api.github.com/repos/topjohnwu/Magisk/releases?per_page=1&include_prereleases=true") | jq -r '.[0].assets[] | select(.name | test("Magisk-.*\\.apk")) | .browser_download_url') -o Magisk.apk
-        unzip -q Magisk.apk "lib/*/libmagiskboot.so" -d ~/magiskboot
-        cp -f ~/magiskboot/lib/armeabi-v7a/libmagiskboot.so "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/vendor/recovery/prebuilt/arm/magiskboot_updated"
-        cp -f ~/magiskboot/lib/arm64-v8a/libmagiskboot.so "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/vendor/recovery/prebuilt/arm64/magiskboot_updated"
-        cp -f ~/magiskboot/lib/x86_64/libmagiskboot.so "${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/vendor/recovery/tools/magiskboot"
+        CONF="${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/${{ inputs.DEVICE_PATH }}/BoardConfig.mk"
+        echo "" >> $CONF
+        echo "# ==========================================" >> $CONF
+        echo "# OrangeFox Specs Injected Auto" >> $CONF
+        echo "FOX_VERSION := \"R12.1_Xperia1V\"" >> $CONF
+        echo "OF_MAINTAINER := \"SelfBuilt\"" >> $CONF
+        echo "FOX_AB_DEVICE := 1" >> $CONF
+        echo "TARGET_NO_RECOVERY := true" >> $CONF
+        echo "ALLOW_MISSING_DEPENDENCIES := true" >> $CONF
+        echo "# ==========================================" >> $CONF
 
     - name: Building OrangeFox
       run: |
@@ -211,7 +158,6 @@ jobs:
       run: |
         echo "BUILD_DATE=$(TZ=Asia/Shanghai date +%Y%m%d)" >> $GITHUB_ENV
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}
-
         DEVICE_TREE_URL="${{ inputs.DEVICE_TREE }}"
         if [[ "${DEVICE_TREE_URL}" == *.git ]]; then
           DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
@@ -222,13 +168,11 @@ jobs:
       uses: softprops/action-gh-release@master
       with:
         files: |
-          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox*.img
+          OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/vendor_boot.img
           OrangeFox/fox_${{ inputs.MANIFEST_BRANCH }}/out/target/product/${{ inputs.DEVICE_NAME }}/OrangeFox*.zip
         name: OrangeFox Recovery for ${{ inputs.DEVICE_NAME }} // ${{ env.BUILD_DATE }}
         tag_name: ${{ github.run_id }}
         body: |
-          ## OrangeFox Recovery Build - Unofficial
-          Build: fox_${{ inputs.MANIFEST_BRANCH }}
-          Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ inputs.DEVICE_TREE_BRANCH }})
-          Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
-          
+          ## OrangeFox Recovery Build for Xperia 1V
+          Build Branch: fox_${{ inputs.MANIFEST_BRANCH }}
+          Device Tree: [Link](${{ env.DEVICE_TREE_URL }}/tree/${{ inputs.DEVICE_TREE_BRANCH }})
