@@ -149,6 +149,7 @@ jobs:
         echo "OF_MAINTAINER := \"SelfBuilt\"" >> $CONF
         echo "FOX_AB_DEVICE := 1" >> $CONF
         echo "TARGET_NO_RECOVERY := true" >> $CONF
+        echo "BOARD_EXCLUDE_KERNEL_FROM_RECOVERY_IMAGE := false" >> $CONF
         echo "ALLOW_MISSING_DEPENDENCIES := true" >> $CONF
         echo "# ==========================================" >> $CONF
 
